@@ -1,6 +1,7 @@
 from ortools.sat.python import cp_model
 import csv
 from itertools import combinations
+import time
 
 
 def read_candidates(path):
@@ -59,129 +60,147 @@ def build_schedule(candidates, interviewers, timeslots,
                    cand_gender, int_gender,
                    cand_avail, int_avail,
                    biased_pairs,
-                   panel_size=2,
-                   K_per_candidate=1,
-                   interviewer_capacity=None
-                   ):
+                   panel_size,
+                   K_gender=1):
+    start_time = time.time()
     model = cp_model.CpModel()
 
     interviewer_panels = list(combinations(interviewers, panel_size))
 
-    print(f"Finnes {len(interviewer_panels)} mulige panel av størrelse {panel_size}")
-
-    feasible = []
+    x = {}  # x[c][p][t] = 1 => candidates c is interviewed by panel p at time t
     for c in candidates:
-        for panel in interviewer_panels:
-
-            if any((c, i) in biased_pairs for i in panel):
-                continue
-
-            if cand_gender.get(c) is None:
-                continue
-
-            has_same_gender = any(int_gender.get(i) == cand_gender.get(c)
-                                  for i in panel if int_gender.get(i) is not None)
-            if not has_same_gender:
-                continue
-
-            candidate_avail = set(cand_avail.get(c, []))
-            panel_avail = candidate_avail
-            for i in panel:
-                interviewer_avail = set(int_avail.get(i, []))
-                panel_avail = panel_avail & interviewer_avail
-
-            for t in panel_avail:
-                if t in timeslots:
-                    feasible.append((c, panel, t))
-
-    if not feasible:
-        print("Ingen mulige kombinasjoner!")
-        return [], {"status": "NO_FEASIBLE_COMBINATIONS"}
-
-    print(f"Fant {len(feasible)} mulige (candidate, panel, timeslot) kombinasjoner")
-
-    x = {}
-    for (c, panel, t) in feasible:
-        panel_str = "_".join(sorted(panel))
-        x[(c, panel, t)] = model.NewBoolVar(f"x_{c}_{panel_str}_{t}")
-
-    cand_vars = {c: [] for c in candidates}
-    int_vars = {i: [] for i in interviewers}
-    int_time_vars = {(i, t): [] for i in interviewers for t in timeslots}
-    cand_time_vars = {(c, t): [] for c in candidates for t in timeslots}
-
-    for (c, panel, t), var in x.items():
-        cand_vars[c].append(var)
-        cand_time_vars[(c, t)].append(var)
-
-        for i in panel:
-            int_vars[i].append(var)
-            int_time_vars[(i, t)].append(var)
+        for p_idx, panel in enumerate(interviewer_panels):
+            if sum(cand_gender[c] == int_gender[panel[i]] for i in range(panel_size)) >= K_gender:
+                for t_idx, timeslot in enumerate(timeslots):
+                    x[c, p_idx, t_idx] = model.NewBoolVar(f'x_{c}_{p_idx}_{t_idx}')
 
     for c in candidates:
-        if cand_vars[c]:
-            model.Add(sum(cand_vars[c]) == K_per_candidate)
+        model.Add(sum(x[c, p_idx, t_idx]
+                      for p_idx in range(len(interviewer_panels))
+                      for t_idx in range(len(timeslots))) == 1)
 
-    for (i, t), vars_it in int_time_vars.items():
-        if vars_it:
-            model.Add(sum(vars_it) <= 1)
+    for c in candidates:
+        for t_idx in range(len(timeslots)):
+            model.Add(sum(x[c, p_idx, t_idx] for p_idx in range(len(interviewer_panels))) <= 1)
 
-    for (c, t), vars_ct in cand_time_vars.items():
-        if vars_ct:
-            model.Add(sum(vars_ct) <= 1)
+    for i in interviewers:
+        for t_idx in range(len(timeslots)):
+            interviews_for_interviewer = []
+            for c in candidates:
+                for p_idx, panel in enumerate(interviewer_panels):
+                    if i in panel:
+                        interviews_for_interviewer.append(x[c, p_idx, t_idx])
+            if interviews_for_interviewer:
+                model.Add(sum(interviews_for_interviewer) <= 1)
 
-    if interviewer_capacity:
+    for c in candidates:
+        available_timeslots = cand_avail.get(c, [])
+        for t_idx, timeslot in enumerate(timeslots):
+            if t_idx not in available_timeslots:
+                for p_idx in range(len(interviewer_panels)):
+                    model.Add(x[c, p_idx, t_idx] == 0)
+
+    for p_idx, panel in enumerate(interviewer_panels):
+        for t_idx, timeslot in enumerate(timeslots):
+            panel_available = all(t_idx in int_avail.get(i, []) for i in panel)
+            if not panel_available:
+                for c in candidates:
+                    model.Add(x[c, p_idx, t_idx] == 0)
+
+    for c in candidates:
         for i in interviewers:
-            if int_vars[i]:
-                cap = interviewer_capacity.get(i, len(timeslots))
-                model.Add(sum(int_vars[i]) <= cap)
+            if (c, i) in biased_pairs or (i, c) in biased_pairs:
+                for p_idx, panel in enumerate(interviewer_panels):
+                    if i in panel:
+                        for t_idx in range(len(timeslots)):
+                            model.Add(x[c, p_idx, t_idx] == 0)
 
-    total_assigned_expr = sum(x.values())
-    model.Maximize(total_assigned_expr)
+    model.maximize(sum(
+        x[c, p_idx, t_idx] for c in candidates for p_idx, panel in enumerate(interviewer_panels) for t_idx in
+        range(len(timeslots))))
+    load = {}
+    for i in interviewers:
+        load[i] = model.NewIntVar(0, len(candidates), f'load_{i}')
+        # load[i] = number of interviews for interviewer i
+        model.Add(load[i] == sum(
+            x[c, p_idx, t_idx]
+            for c in candidates
+            for p_idx, panel in enumerate(interviewer_panels)
+            for t_idx in range(len(timeslots))
+            if i in panel
+        ))
+    max_load = model.NewIntVar(0, len(candidates), 'max_load')
+    min_load = model.NewIntVar(0, len(candidates), 'min_load')
 
+    for i in interviewers:
+        model.Add(load[i] <= max_load)
+        model.Add(load[i] >= min_load)
+
+    model.Maximize(
+        sum(x[c, p_idx, t_idx] for c in candidates for p_idx, _ in enumerate(interviewer_panels) for t_idx in
+            range(
+                len(timeslots)))  # More weight to maximizing the amount of interviews, but a small effect to not have too many interviews per interviewer
+        * 1000
+        - (max_load - min_load)
+    )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 30.0
-    solver.parameters.num_search_workers = 8
+
     status = solver.Solve(model)
+    solve_time = time.time() - start_time
 
-    schedule = []
-    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        for (c, panel, t), var in x.items():
-            if solver.Value(var):
-                schedule.append((c, panel, t))
+    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+        schedule = []
+        for c in candidates:
+            for p_idx, panel in enumerate(interviewer_panels):
+                for t_idx, timeslot in enumerate(timeslots):
+                    if solver.Value(x[c, p_idx, t_idx]):
+                        schedule.append((c, list(panel), timeslot))
 
-        total_assigned = len(schedule)
-        candidates_interviewed = len(set(c for c, panel, t in schedule))
-        max_interviewer_load = 0
         interviewer_loads = {}
+        for i in interviewers:
+            interviewer_loads[i] = 0
 
-        if schedule:
-            for i in interviewers:
-                load = sum(1 for (c, panel, t) in schedule if i in panel)
-                interviewer_loads[i] = load
-                if load > max_interviewer_load:
-                    max_interviewer_load = load
+        for _, panel, _ in schedule:
+            for i in panel:
+                interviewer_loads[i] += 1
 
         stats = {
-            "total_interviews": int(total_assigned),
-            "candidates_interviewed": int(candidates_interviewed),
-            "max_interviewer_load": int(max_interviewer_load),
-            "interviewer_loads": interviewer_loads,
-            "panel_size": panel_size,
             "status": "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE",
-            "solve_time": solver.WallTime()
+            "total_interviews": len(schedule),
+            "candidates_interviewed": len(set(c for c, _, _ in schedule)),
+            "panel_size": panel_size,
+            "solve_time": solve_time,
+            "max_interviewer_load": max(interviewer_loads.values()) if interviewer_loads else 0,
+            "interviewer_loads": interviewer_loads
         }
+
         return schedule, stats
+
     else:
-        return [], {"status": "INFEASIBLE", "solve_time": solver.WallTime()}
+        status_map = {
+            cp_model.INFEASIBLE: "INFEASIBLE",
+            cp_model.MODEL_INVALID: "MODEL_INVALID",
+            cp_model.UNKNOWN: "UNKNOWN"
+        }
+        return [], {
+            "status": status_map.get(status, "UNKNOWN"),
+            "solve_time": solve_time,
+            "total_interviews": 0,
+            "candidates_interviewed": 0,
+            "panel_size": panel_size
+        }
 
 
 try:
-
     candidates, cand_gender, cand_avail = read_candidates('data/candidates.csv')
     interviewers, int_gender, int_avail = read_interviewers('data/interviewers.csv')
 
-    timeslots = range(0, 24)
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    timeslots = [i for i in range(24)]
+    panel_size = 3
+    K_gender = 1
+
     biased_pairs = set()
 
     print(f"Lasta {len(candidates)} kandidater og {len(interviewers)} intervuere")
@@ -195,8 +214,8 @@ try:
         cand_avail=cand_avail,
         int_avail=int_avail,
         biased_pairs=biased_pairs,
-        panel_size=2,
-        K_per_candidate=1,
+        panel_size=panel_size,
+        K_gender=K_gender
     )
 
     print(f"\nStatus:: {stats.get('status', 'UNKNOWN')}")
