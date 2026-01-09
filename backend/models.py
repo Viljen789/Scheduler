@@ -1,19 +1,16 @@
 from pydantic import BaseModel
-from typing import List, Optional, Set
-
+from typing import List, Optional
 
 class Person(BaseModel):
-    id: int
+    id: str
     name: str
     gender: Optional[str] = None
 
+class Interviewer(Person):
+    availability: List[int] = []
+    biased: List[str] = []
+
 class ScheduleRequests(BaseModel):
     candidates: List[Person]
-    interviewers: List[Person]
+    interviewers: List[Interviewer]
     panel_size: int = 3
-
-
-
-class Interviewer(Person):
-    availability: Set[int] = {}
-    biased: List[int]

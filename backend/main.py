@@ -12,16 +12,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-@app.get("/")
-def read_root():
-    return {"message": "Scheduler API is running"}
 
 @app.post("/solve")
 def solve_schedule(data: ScheduleRequests):
-    print(f"Recieved request for {len(data.candidates)} candidates and {len(data.interviewers)} interviewers")
-    candidates = data.candidates
-    interviewers = data.interviewers
-    return {
-        "status": "recieved",
-        "info": f"Ready to schedule {len(candidates)} candidates with {len(interviewers)} interviewers"
-    }
+    print(f"Solving for {len(data.candidates)} candidates...")
+
+    timeslots = list(range(24))
+
+    result = run_solver(
+        candidates=data.candidates,
+        interviewers=data.interviewers,
+        panel_size=data.panel_size,
+        timeslots=timeslots
+    )
+
+    return result

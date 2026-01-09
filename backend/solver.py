@@ -22,23 +22,20 @@ def solve_schedule(
                 assign[(interviewer.id, candidate.id, timeslot)] = model.NewBoolVar(
                     f"assign_i{interviewer.id}_c{candidate.id}t_{timeslot}")
 
-    # Everyone has an interview
     for candidate in candidates:
         model.add(sum([schedule[(candidate.id, t)] for t in timeslots]) == 1)
 
-    # Exactly panel_size interviewers pr interview (if interview)
     for candidate in candidates:
         for timeslot in timeslots:
             assigned_interviewers = sum(
                 assign[(interviewer.id, candidate.id, timeslot)] for interviewer in interviewers)
             model.Add(assigned_interviewers == schedule[(candidate.id, timeslot)] * panel_size)
 
-    # No match if interviewer unavailable/biased
     for interviewer in interviewers:
         for candidate in candidates:
             for timeslot in timeslots:
                 if timeslot not in interviewer.availability or candidate.id in interviewer.biased:
-                    model.Add(sum(assign[(interviewer.id, candidate.id, timeslot)]) == 0)
+                    model.Add(assign[(interviewer.id, candidate.id, timeslot)] == 0)
 
     for interviewer in interviewers:
         for timeslot in timeslots:
@@ -59,5 +56,5 @@ def solve_schedule(
                         "candidate": candidate.name,
                         "time": timeslot,
                         "panel": panel})
-        return {"status": "SUCCESS", "results": results}
+        return {"status": "SUCCESS", "schedule": results}
     return {"status": "INFEASIBLE", "schedule":[]}
