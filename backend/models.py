@@ -1,16 +1,16 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-class Person(BaseModel):
+class Candidate(BaseModel):
     id: str
     name: str
     gender: Optional[str] = None
 
-class Interviewer(Person):
+class Interviewer(Candidate):
     availability: List[int] = []
     biased: List[str] = []
 
 class ScheduleRequests(BaseModel):
-    candidates: List[Person]
+    candidates: List[Candidate]
     interviewers: List[Interviewer]
     panel_size: int = 3

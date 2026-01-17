@@ -1,11 +1,11 @@
-export interface Person{
+export interface Candidate{
    id: string;
    name: string;
    gender?: string;
 
 }
 
-export interface Interviewer extends Person{
+export interface Interviewer extends Candidate{
     biased: number[];
     availability: number[];
 }
