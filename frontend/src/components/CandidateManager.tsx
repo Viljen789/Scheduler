@@ -10,7 +10,7 @@ interface Props {
 export default function CandidateManager({data, onAdd}: Props) {
     const [name, setName] = useState("");
     const [id, setId] = useState("");
-    const [gender, setGender] = useState("Male");
+    const [gender, setGender] = useState("M");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

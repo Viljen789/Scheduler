@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import CandidateManager from "./components/CandidateManager";
 import InterviewerManager from "./components/InterviewerManager";
-import SolverView from "./components/SolverView";
+import ScheduleTestingView from "./components/ScheduleTestingView";
 import type { Candidate, Interviewer } from './types';
 
 export default function App() {
@@ -53,7 +53,7 @@ export default function App() {
         onAdd={handleAddInterviewer}
       />
 
-      <SolverView
+      <ScheduleTestingView
         candidates={candidates}
         interviewers={interviewers}
       />
