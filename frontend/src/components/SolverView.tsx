@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import axios from 'axios';
-import type {Candidate, Interviewer} from '../types';
+import type { Candidate, Interviewer } from '../types';
+import { cn } from "../lib/utils";
 
 interface Props {
   candidates: Candidate[];
   interviewers: Interviewer[];
 }
 
-// Define what the backend returns (The shape of the response)
 interface ScheduleItem {
   candidate: string;
   time: number;
@@ -26,106 +26,100 @@ export default function SolverView({ candidates, interviewers }: Props) {
   const [error, setError] = useState("");
 
   const handleSolve = async () => {
-    // 1. Basic Validation
     if (candidates.length === 0 || interviewers.length === 0) {
-      setError("You need at least one candidate and one interviewer.");
+      setError("Please add at least one candidate and one interviewer.");
       return;
     }
-
     setLoading(true);
     setError("");
     setResult(null);
 
     try {
-      // 2. The API Call
-      // We send the current state directly to Python
-      const payload = {
-        candidates: candidates,
-        interviewers: interviewers,
-        panel_size: panelSize
-      };
-
+      const payload = { candidates, interviewers, panel_size: panelSize };
       const response = await axios.post('http://localhost:8000/solve', payload);
       setResult(response.data);
-
     } catch (err) {
       console.error(err);
-      setError("Failed to connect to the solver. Is the backend running?");
+      setError("Connection failed. Is the backend server running?");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white p-6 rounded shadow border mb-6">
-        <h2 className="text-xl font-bold mb-4">Run Scheduler</h2>
-
-        {/* Controls */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex flex-col">
-            <label className="text-sm font-semibold text-gray-600">Panel Size</label>
-            <input
-              type="number"
-              min="1"
-              max="5"
-              value={panelSize}
-              onChange={(e) => setPanelSize(parseInt(e.target.value))}
-              className="border p-2 rounded w-24"
-            />
+    <div className="max-w-4xl mx-auto py-8">
+      <div className="bg-white border border-zinc-200 rounded-xl p-8">
+        <div className="flex flex-col md:flex-row md:items-end gap-6 mb-8 border-b border-zinc-100 pb-8">
+          <div className="flex-1">
+             <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Schedule Generator</h2>
+             <p className="text-zinc-500 mt-1 text-sm">Review your pool and generate an optimized timeline.</p>
           </div>
 
-          <button
-            onClick={handleSolve}
-            disabled={loading}
-            className={`flex-1 p-3 rounded text-white font-bold transition-colors
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
-          >
-            {loading ? "Optimizing Schedule..." : "GENERATE SCHEDULE"}
-          </button>
+          <div className="flex items-end gap-4">
+             <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Panel Size</label>
+                <input
+                  type="number"
+                  min="1" max="5"
+                  value={panelSize}
+                  onChange={(e) => setPanelSize(parseInt(e.target.value))}
+                  className="w-20 bg-zinc-50 border border-zinc-200 rounded px-3 py-2 text-sm text-center focus:ring-1 focus:ring-zinc-900 focus:bg-white"
+                />
+             </div>
+             <button
+                onClick={handleSolve}
+                disabled={loading}
+                className="bg-zinc-900 text-white px-6 py-2 rounded text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors h-[38px]"
+             >
+                {loading ? "Optimizing..." : "Run Solver"}
+             </button>
+          </div>
         </div>
 
-        {/* Error Message */}
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4 border border-red-200">
-            {error}
+          <div className="bg-red-50 text-red-600 px-4 py-3 rounded text-sm border border-red-100 flex items-center gap-2 mb-6">
+            <span className="font-bold">Error:</span> {error}
           </div>
         )}
 
-        {/* Status: Infeasible */}
         {result?.status === "INFEASIBLE" && (
-          <div className="bg-orange-50 text-orange-800 p-4 rounded border border-orange-200 text-center">
-            <p className="font-bold text-lg">⚠️ No Solution Found</p>
-            <p>Try adding more interviewers, reducing the panel size, or checking availability.</p>
+          <div className="bg-zinc-50 text-zinc-600 px-6 py-8 rounded border border-zinc-200 text-center">
+            <p className="font-bold text-lg mb-1">No Solution Found</p>
+            <p className="text-sm text-zinc-400">Try reducing panel size or increasing interviewer availability.</p>
           </div>
         )}
 
-        {/* Status: Success (The Table) */}
         {result?.status === "SUCCESS" && (
-          <div className="mt-6">
-            <h3 className="text-lg font-bold mb-2 text-green-700">✓ Optimized Schedule</h3>
-            <div className="overflow-hidden border rounded-lg">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-100">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-900 mb-4">Generated Schedule</h3>
+            <div className="border border-zinc-200 rounded-lg overflow-hidden">
+              <table className="min-w-full">
+                <thead className="bg-zinc-50 border-b border-zinc-200">
                   <tr>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-600">Time</th>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-600">Candidate</th>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-600">Interview Panel</th>
+                    <th className="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Time</th>
+                    <th className="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Candidate</th>
+                    <th className="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Panel</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-zinc-100 bg-white">
                   {result.schedule
-                    .sort((a, b) => a.time - b.time) // Sort by time
+                    .sort((a, b) => a.time - b.time)
                     .map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-800 font-mono">
+                    <tr key={idx} className="hover:bg-zinc-50 transition-colors">
+                      <td className="py-3 px-4 text-sm font-mono text-zinc-400">
                         {item.time}:00
                       </td>
-                      <td className="py-3 px-4 font-medium text-blue-600">
+                      <td className="py-3 px-4 text-sm font-semibold text-zinc-900">
                         {item.candidate}
                       </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {item.panel.join(", ")}
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                           {item.panel.map((p, i) => (
+                               <span key={i} className="text-[10px] font-bold bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded uppercase tracking-wide border border-zinc-200">
+                                   {p}
+                               </span>
+                           ))}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -2,85 +2,80 @@ import csv
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .solver import solve_schedule as run_solver
+from typing import List
 from .models import ScheduleRequests
+from .solver import solve_schedule
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"message": "Backend is active!"}
+def parse_availability(avail_str: str) -> List[int]:
+    """Converts '9;10;11' string to [9, 10, 11]"""
+    if not avail_str:
+        return []
+    try:
+        # Handle cases like "9; 10; 11" with spaces
+        return [int(x) for x in avail_str.split(";") if x.strip().isdigit()]
+    except ValueError:
+        return []
 
-@app.post("/solve")
-def solve_schedule(data: ScheduleRequests):
-    print(f"Solving for {len(data.candidates)} candidates...")
+def parse_biased(biased_str: str) -> List[str]:
+    if not biased_str:
+        return []
+    return [x.strip() for x in biased_str.split(";") if x.strip()]
 
-    timeslots = list(range(24))
-
-    result = run_solver(
-        candidates=data.candidates,
-        interviewers=data.interviewers,
-        panel_size=data.panel_size,
-        timeslots=timeslots
-    )
-
-    return result
-
-def parse_availability(avail_str):
-    if not avail_str: return []
-    return [int(x) for x in avail_str.split(";") if x]
+def clean_row_keys(row: dict) -> dict:
+    """Removes leading/trailing spaces from CSV header keys"""
+    return {k.strip(): v for k, v in row.items() if k is not None}
 
 @app.get("/load-data")
-def load_csv_data():
+def load_data():
     candidates = []
     interviewers = []
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    base_path = os.path.join(current_dir, "..", "data")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, "data")
 
-    if not os.path.exists(base_path):
-        base_path = "data"
-
-    print(f"Loading data from: {os.path.abspath(base_path)}")
-
-    cand_path = os.path.join(base_path, "candidates.csv")
+    # 1. Read Candidates
+    cand_path = os.path.join(data_dir, "candidates.csv")
     if os.path.exists(cand_path):
-        with open(cand_path, "r") as f:
-            reader = csv.reader(f)
-            next(reader, None)
-            for row in reader:
-                if row:
-                    candidates.append({
-                        "id": row[0],
-                        "gender": row[1],
-                        "name": row[2]
-                    })
-    else:
-        print(f"Warning: Could not find {cand_path}")
+        with open(cand_path, mode='r', encoding='utf-8-sig') as f: # utf-8-sig handles BOM
+            reader = csv.DictReader(f)
+            for raw_row in reader:
+                row = clean_row_keys(raw_row)
+                candidates.append({
+                    "id": row.get("id", "").strip(),
+                    "name": row.get("name", "").strip(),
+                    "gender": row.get("gender", "").strip()
+                })
 
-    int_path = os.path.join(base_path, "interviewers.csv")
+    # 2. Read Interviewers
+    int_path = os.path.join(data_dir, "interviewers.csv")
     if os.path.exists(int_path):
-        with open(int_path, "r") as f:
-            reader = csv.reader(f)
-            next(reader, None)
-            for row in reader:
-                if row:
-                    interviewers.append({
-                        "id": row[0],
-                        "gender": row[1],
-                        "availability": parse_availability(row[2]),
-                        "name": row[3],
-                        "biased": row[4].split(";") if len(row) > 4 and row[4] else []
-                    })
-    else:
-        print(f"Warning: Could not find {int_path}")
+        with open(int_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for raw_row in reader:
+                row = clean_row_keys(raw_row)
+                interviewers.append({
+                    "id": row.get("id", "").strip(),
+                    "name": row.get("name", "").strip(),
+                    "gender": row.get("gender", "").strip(),
+                    "availability": parse_availability(row.get("availability", "")),
+                    "biased": parse_biased(row.get("biased", ""))
+                })
 
     return {"candidates": candidates, "interviewers": interviewers}
+
+@app.post("/solve")
+def solve(request: ScheduleRequests):
+    return solve_schedule(
+        candidates=request.candidates,
+        interviewers=request.interviewers,
+        panel_size=request.panel_size
+    )

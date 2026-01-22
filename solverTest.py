@@ -17,7 +17,7 @@ def formatting(solver_result):
 
 
 
-with open("data/candidates.csv", "r") as candidates_file:
+with open("backend/data/candidates.csv", "r") as candidates_file:
     candHeadsers = candidates_file.readline()
     for line in candidates_file:
         curCandidate = (line.strip().split(","))
@@ -26,7 +26,7 @@ with open("data/candidates.csv", "r") as candidates_file:
 
 
 
-with open("data/interviewers.csv", "r") as interviewers_file:
+with open("backend/data/interviewers.csv", "r") as interviewers_file:
     interviewHeaders = interviewers_file.readline()
     for line in interviewers_file:
         curInterviewer = line.strip().split(",")
