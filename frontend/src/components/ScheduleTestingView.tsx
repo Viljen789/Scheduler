@@ -99,31 +99,26 @@ export function ScheduleTestingView({ candidates, interviewers }: ScheduleTestin
       {/* Minimal Header */}
       <div className="flex items-end justify-between border-b border-zinc-200 pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Schedule Optimizer</h1>
-          <p className="text-zinc-500 mt-2 text-sm">
-            Configure parameters and generate collision-free schedules.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Planleggings-optimaliserer</h1>
         </div>
 
-        {/* Key Metrics */}
         <div className="flex gap-8 text-right">
           <div>
             <div className="text-3xl font-light tracking-tighter">{candidates.length}</div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Candidates</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Kandidater</div>
           </div>
           <div>
             <div className="text-3xl font-light tracking-tighter">{interviewers.length}</div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Interviewers</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Intervjuere</div>
           </div>
         </div>
       </div>
 
-      {/* Modern Tabs */}
       <div>
         <div className="flex gap-8 border-b border-zinc-100 mb-8">
           {[
-            { id: 'config', label: 'Configuration' },
-            { id: 'results', label: 'Results' },
+            { id: 'config', label: 'Oppsett' },
+            { id: 'results', label: 'Resultat' },
             { id: 'visual', label: 'Timeline' },
           ].map((tab) => (
             <button
@@ -144,15 +139,13 @@ export function ScheduleTestingView({ candidates, interviewers }: ScheduleTestin
           ))}
         </div>
 
-        {/* Content Area */}
         <div className="min-h-[400px]">
           {activeTab === 'config' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              {/* Left Column: Controls */}
               <div className="space-y-8">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-4">
-                    Panel Size
+                    Antal intervjuere
                   </label>
                   <div className="flex gap-2">
                     {[2, 3, 4, 5].map((size) => (
@@ -179,7 +172,7 @@ export function ScheduleTestingView({ candidates, interviewers }: ScheduleTestin
                     'w-full py-4 rounded bg-zinc-900 text-white font-medium text-sm hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                   )}
                 >
-                  {loading ? 'Processing...' : 'Generate Schedule'}
+                  {loading ? 'Prosesserer...' : 'Lag plan'}
                 </button>
 
                 {error && (
@@ -189,10 +182,9 @@ export function ScheduleTestingView({ candidates, interviewers }: ScheduleTestin
                 )}
               </div>
 
-              {/* Right Column: Availability Editor */}
               <div className="md:col-span-2 space-y-6">
-                <div className="flex items-center justify-between">
-                   <h3 className="text-sm font-bold text-zinc-900">Interviewer Availability</h3>
+                <div className=" items-center">
+                   <h3 className="text-lg font-bold text-zinc-900 p-2 content-center text-center">Tilgjengelighet</h3>
                    <div className="flex gap-2">
                       {interviewers.map((interviewer) => (
                         <button

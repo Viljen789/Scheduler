@@ -20,7 +20,6 @@ def parse_availability(avail_str: str) -> List[int]:
     if not avail_str:
         return []
     try:
-        # Handle cases like "9; 10; 11" with spaces
         return [int(x) for x in avail_str.split(";") if x.strip().isdigit()]
     except ValueError:
         return []
@@ -42,10 +41,9 @@ def load_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
 
-    # 1. Read Candidates
     cand_path = os.path.join(data_dir, "candidates.csv")
     if os.path.exists(cand_path):
-        with open(cand_path, mode='r', encoding='utf-8-sig') as f: # utf-8-sig handles BOM
+        with open(cand_path, mode='r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for raw_row in reader:
                 row = clean_row_keys(raw_row)
@@ -55,7 +53,6 @@ def load_data():
                     "gender": row.get("gender", "").strip()
                 })
 
-    # 2. Read Interviewers
     int_path = os.path.join(data_dir, "interviewers.csv")
     if os.path.exists(int_path):
         with open(int_path, mode='r', encoding='utf-8-sig') as f:

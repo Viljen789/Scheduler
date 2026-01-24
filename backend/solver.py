@@ -96,10 +96,6 @@ def solve_schedule(
             if concurrent:
                 model.Add(sum(concurrent) <= 1)
 
-    # --- 4. OPTIMIZATION ---
-
-    # Objective 1: Minimize "Bad Times" (High Priority)
-    # Objective 2: Balance Load (Low Priority)
 
     penalty_terms = []
 
@@ -129,12 +125,9 @@ def solve_schedule(
 
     model.AddMaxEquality(max_load, loads)
 
-    # Combine: Minimize (BadTimes + MaxLoad)
-    # BadTimes has weight 100 per violation, MaxLoad has weight 1.
-    # This means the solver will fix availability first, then balance the team.
+
     model.Minimize(sum(penalty_terms) + max_load)
 
-    # --- 5. SOLVE ---
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 10.0
 

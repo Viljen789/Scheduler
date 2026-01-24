@@ -38,7 +38,7 @@ export default function App() {
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8 font-sans text-gray-800">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Scheduler</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Planlegger</h1>
         <p className="text-sm text-gray-500 mt-1">Backend Status: {status}</p>
       </div>
       <hr />

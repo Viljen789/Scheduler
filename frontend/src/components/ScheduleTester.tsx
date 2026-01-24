@@ -93,7 +93,6 @@ export function ScheduleTester({
 
   return (
     <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden select-none">
-      {/* Header */}
       <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
          {title && <h2 className="text-sm font-bold text-zinc-900">{title}</h2>}
          <div className="flex gap-2">
@@ -101,11 +100,10 @@ export function ScheduleTester({
                onClick={() => setSelectedSlots(new Set())}
                className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 hover:text-zinc-600 px-2 py-1"
             >
-               Clear
+                Tøm
             </button>
             <button
                onClick={() => {
-                  // Quick logic to select all Mon-Fri 9-17
                   const workSlots = new Set<string>()
                   for (let d = 0; d < 5; d++) {
                     for (let h = 9; h < 17; h++) {
@@ -116,7 +114,7 @@ export function ScheduleTester({
                }}
                className="text-[10px] uppercase font-bold tracking-wider bg-zinc-100 text-zinc-600 px-2 py-1 rounded hover:bg-zinc-200"
             >
-               Work Hours
+               Mandag - Fredag
             </button>
          </div>
       </div>
@@ -143,7 +141,6 @@ export function ScheduleTester({
                 const isSelected = selectedSlots.has(key)
                 const isPreview = previewSlots.has(key)
 
-                // Visual Logic
                 let bgClass = "bg-white hover:bg-zinc-50" // Default
                 if (isSelected) bgClass = "bg-zinc-900" // Selected
                 if (isPreview) bgClass = dragMode === 'select' ? "bg-zinc-200" : "bg-red-50" // Dragging

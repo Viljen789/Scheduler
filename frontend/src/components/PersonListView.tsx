@@ -84,7 +84,6 @@ const AvailabilitySquare = ({ dayLabel, dayIndex, allSlots, isActive }: {
                 )}
             />
 
-            {/* Day Label (Below bar) */}
             <div className={cn(
                 "text-[9px] text-center mt-1 font-medium transition-colors uppercase",
                 isActive ? "text-zinc-600" : "text-zinc-200"
@@ -92,7 +91,6 @@ const AvailabilitySquare = ({ dayLabel, dayIndex, allSlots, isActive }: {
                 {dayLabel.charAt(0)}
             </div>
 
-            {/* Tooltip */}
             {showTooltip && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[150px] z-50">
                     <div className="bg-zinc-900 text-white text-[10px] rounded py-1.5 px-3 shadow-xl text-center">
